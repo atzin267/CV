@@ -348,8 +348,8 @@ function Snake() {
                 {dead ? `Game Over — score ${score}` : "🐍 Snake"}
               </div>
               <div style={{ fontSize: 12.5, opacity: .9 }}>Use arrow keys to move.</div>
-              <button className="keycap accent" style={{ minWidth: 0, padding: "6px 14px" }} onClick={reset}>
-                <span className="klabel">{dead ? "Play again" : "Start"} (Space)</span>
+              <button className="keycap" style={{ minWidth: 0, padding: "6px 14px", background: "linear-gradient(180deg,#fff,#f1eef0)", border: "1px solid #4a0818" }} onClick={reset}>
+                <span className="klabel" style={{ color: "#8a0f2e" }}>{dead ? "Play again" : "Start"} (Space)</span>
               </button>
             </div>
           )}
@@ -461,9 +461,9 @@ export default function App() {
           box-shadow:0 1px 0 #c4254f inset,0 -1px 2px rgba(0,0,0,.35) inset,0 0 0 #4a0818,0 1px 2px rgba(0,0,0,.5);}
         .keycap .fkey{font-size:10px;font-weight:700;letter-spacing:.5px;color:#ffc9d8;line-height:1}
         .keycap .klabel{font-size:12.5px;font-weight:700;line-height:1;color:#fff}
-        .keycap.accent{background:linear-gradient(180deg,#fff 0%,#f1eef0 100%);border-color:#4a0818}
-        .keycap.accent .klabel{color:#8a0f2e}
-        .keycap.accent .fkey{color:#b01540}
+        .keycap.accent{background:linear-gradient(180deg,#a8163c 0%,#8a0f2e 60%,#6e0a24 100%);border:1px solid #ffd9e2;box-shadow:0 1px 0 #c4254f inset,0 -2px 3px rgba(0,0,0,.35) inset,0 4px 0 #4a0818,0 6px 9px rgba(0,0,0,.45)}
+        .keycap.accent .klabel{color:#fff}
+        .keycap.accent .fkey{color:#ffd9e2}
         a{color:${C.blue};text-decoration:none}
         a:hover{text-decoration:underline}
         .cmdline{background:transparent;border:none;outline:none;color:${C.ink};
@@ -494,7 +494,9 @@ export default function App() {
               background: "linear-gradient(180deg,#3a0612,#2a0610)",
             }}>
               {NAV_KEYS.map(([fkey, label, cmd, accent]) => (
-                <button key={cmd} className={`keycap${accent ? " accent" : ""}`} onClick={(e) => { e.currentTarget.blur(); run(cmd); }}>                  <span className="klabel">{label}</span>
+                <button key={cmd} className={`keycap${accent ? " accent" : ""}`} onClick={(e) => { e.currentTarget.blur(); run(cmd); }}>
+                  <span className="fkey">{fkey}</span>
+                  <span className="klabel">{label}</span>
                 </button>
               ))}
             </div>
