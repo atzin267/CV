@@ -241,8 +241,17 @@ function TypeBlock({ text, speed = 8, onDone, style }) {
 // ---------- SNAKE GAME ----------
 // ---------- SNAKE GAME ----------
 function Snake() {
-  const COLS = 22, ROWS = 16, CELL = 18;
-  const [snake, setSnake] = useState([[8, 8], [7, 8], [6, 8]]);
+const COLS = 22, ROWS = 16;
+  const [CELL, setCELL] = useState(18);
+  useEffect(() => {
+    const fit = () => {
+      const avail = Math.min(window.innerWidth - 60, COLS * 18);
+      setCELL(Math.max(12, Math.floor(avail / COLS)));
+    };
+    fit();
+    window.addEventListener("resize", fit);
+    return () => window.removeEventListener("resize", fit);
+  }, []);  const [snake, setSnake] = useState([[8, 8], [7, 8], [6, 8]]);
   const [dir, setDir] = useState([1, 0]);
   const [food, setFood] = useState([14, 8]);
   const [dead, setDead] = useState(false);
@@ -348,7 +357,7 @@ function Snake() {
           onTouchMove={onTouchMove}
           onTouchEnd={onTouchEnd}
           style={{
-            position: "relative", width: COLS * CELL, height: ROWS * CELL, maxWidth: "92vw",
+            position: "relative", width: COLS * CELL, height: ROWS * CELL,
             background: "#fff", border: `2px solid ${C.border}`, borderRadius: 4,
             backgroundImage: `linear-gradient(${C.panel} 1px,transparent 1px),linear-gradient(90deg,${C.panel} 1px,transparent 1px)`,
             backgroundSize: `${CELL}px ${CELL}px`, touchAction: "none",
