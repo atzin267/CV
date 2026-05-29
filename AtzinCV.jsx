@@ -461,9 +461,9 @@ export default function App() {
           box-shadow:0 1px 0 #c4254f inset,0 -1px 2px rgba(0,0,0,.35) inset,0 0 0 #4a0818,0 1px 2px rgba(0,0,0,.5);}
         .keycap .fkey{font-size:10px;font-weight:700;letter-spacing:.5px;color:#ffc9d8;line-height:1}
         .keycap .klabel{font-size:12.5px;font-weight:700;line-height:1;color:#fff}
-        .keycap.accent{background:linear-gradient(180deg,#a8163c 0%,#8a0f2e 60%,#6e0a24 100%);border:1px solid #ffd9e2;box-shadow:0 1px 0 #c4254f inset,0 -2px 3px rgba(0,0,0,.35) inset,0 4px 0 #4a0818,0 6px 9px rgba(0,0,0,.45)}
+.keycap.accent{background:linear-gradient(180deg,#a8163c 0%,#8a0f2e 60%,#6e0a24 100%);border:1px solid #4a0818;box-shadow:0 1px 0 #c4254f inset,0 -2px 3px rgba(0,0,0,.35) inset,0 4px 0 #4a0818,0 6px 9px rgba(0,0,0,.45)}
         .keycap.accent .klabel{color:#fff}
-        .keycap.accent .fkey{color:#ffd9e2}
+.keycap.accent .fkey{color:#ffc9d8}
         a{color:${C.blue};text-decoration:none}
         a:hover{text-decoration:underline}
         .cmdline{background:transparent;border:none;outline:none;color:${C.ink};
