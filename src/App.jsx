@@ -77,15 +77,15 @@ const CV = {
 
 // ---------- THEME ----------
 const C = {
-  black: "#000000",
-  panel: "#c9c9bd",
-  titlebar: "#b85c1e",
-  ink: "#1a1a1a",
-  blue: "#1f4fd6",
-  blueKey: "#2a3fb0",
-  green: "#1f7a3d",
-  grey: "#555",
-  border: "#5c5c54",
+  black: "#1c0a10",        // near-black guinda backdrop
+  panel: "#fbfafa",        // bright white panel
+  titlebar: "#8a0f2e",     // intense guinda red
+  ink: "#241f20",          // dark text on white
+  blue: "#8a0f2e",         // links -> guinda red
+  blueKey: "#b01540",      // keys -> brighter guinda
+  green: "#8a0f2e",        // headings -> guinda red
+  grey: "#6b6b6b",
+  border: "#5e0a20",       // deep guinda border
 };
 
 // ---------- PDF GENERATION ----------
@@ -95,8 +95,8 @@ function generatePDF() {
   const W = doc.internal.pageSize.getWidth();
   let y = M;
 
-  const navy = [31, 56, 100];
-  const accent = [46, 117, 182];
+  const navy = [138, 15, 46];
+  const accent = [176, 21, 64];
   const grey = [90, 90, 90];
 
   const checkBreak = (h) => {
@@ -192,8 +192,8 @@ function generatePDF() {
   doc.save("CV_Guerrero_Leyva_Atzin_Emiliano.pdf");
 }
 
-// ---------- BOOT LINES ----------
-// nav keycaps: [F-label, button label, command, isAccent]
+// ---------- NAV KEYS ----------
+// [F-label, button label, command, isAccent]
 const NAV_KEYS = [
   ["F1", "About", "about", false],
   ["F2", "Experience", "experience", false],
@@ -202,6 +202,7 @@ const NAV_KEYS = [
   ["F5", "Contact", "contact", false],
   ["F6", "PDF ↓", "pdf", true],
   ["F7", "LinkedIn", "linkedin", false],
+  ["F8", "Snake 🐍", "snake", true],
   ["esc", "Clear", "clear", false],
 ];
 
@@ -214,41 +215,168 @@ const BOOT_LINES = [
   "[  0.991337] Ready.",
 ];
 
-// ---------- typing hook ----------
+// ---------- typing hook (per-character reveal) ----------
 function useTyped(text, speed = 22, start = true) {
   const [out, setOut] = useState("");
+  const [done, setDone] = useState(false);
   useEffect(() => {
     if (!start) return;
-    setOut("");
+    setOut(""); setDone(false);
     let i = 0;
     const id = setInterval(() => {
       i++;
       setOut(text.slice(0, i));
-      if (i >= text.length) clearInterval(id);
+      if (i >= text.length) { clearInterval(id); setDone(true); }
     }, speed);
     return () => clearInterval(id);
   }, [text, speed, start]);
-  return out;
+  return [out, done];
 }
 
 const Cursor = () => (
   <span style={{
-    display: "inline-block", width: 9, height: 16, background: C.ink,
+    display: "inline-block", width: 9, height: 16, background: C.titlebar,
     marginLeft: 2, verticalAlign: -2, animation: "blink 1s steps(1) infinite",
   }} />
 );
 
-// ---------- main component ----------
+// A block of text that types itself out, then "highlights" when finished.
+function TypeBlock({ text, speed = 8, onDone, style }) {
+  const [out, done] = useTyped(text, speed, true);
+  useEffect(() => { if (done && onDone) onDone(); }, [done, onDone]);
+  return (
+    <span className={done ? "typed-done" : ""} style={style}>
+      {out}{!done && <Cursor />}
+    </span>
+  );
+}
+
+// ====================================================================
+//  SNAKE GAME
+// ====================================================================
+function Snake() {
+  const COLS = 22, ROWS = 16, CELL = 18;
+  const [snake, setSnake] = useState([[8, 8], [7, 8], [6, 8]]);
+  const [dir, setDir] = useState([1, 0]);
+  const [food, setFood] = useState([14, 8]);
+  const [dead, setDead] = useState(false);
+  const [score, setScore] = useState(0);
+  const [started, setStarted] = useState(false);
+  const dirRef = useRef(dir);
+  const snakeRef = useRef(snake);
+  dirRef.current = dir;
+  snakeRef.current = snake;
+
+  const randFood = useCallback((sn) => {
+    let f;
+    do { f = [Math.floor(Math.random() * COLS), Math.floor(Math.random() * ROWS)]; }
+    while (sn.some(([x, y]) => x === f[0] && y === f[1]));
+    return f;
+  }, []);
+
+  const reset = useCallback(() => {
+    setSnake([[8, 8], [7, 8], [6, 8]]);
+    setDir([1, 0]); dirRef.current = [1, 0];
+    setFood([14, 8]); setDead(false); setScore(0); setStarted(true);
+  }, []);
+
+  // keyboard control
+  useEffect(() => {
+    const onKey = (e) => {
+      const k = e.key;
+      const cur = dirRef.current;
+      if (k === "ArrowUp" && cur[1] !== 1) { e.preventDefault(); setDir([0, -1]); }
+      else if (k === "ArrowDown" && cur[1] !== -1) { e.preventDefault(); setDir([0, 1]); }
+      else if (k === "ArrowLeft" && cur[0] !== 1) { e.preventDefault(); setDir([-1, 0]); }
+      else if (k === "ArrowRight" && cur[0] !== -1) { e.preventDefault(); setDir([1, 0]); }
+      else if (k === " ") { e.preventDefault(); if (dead || !started) reset(); }
+    };
+    window.addEventListener("keydown", onKey);
+    return () => window.removeEventListener("keydown", onKey);
+  }, [dead, started, reset]);
+
+  // game loop
+  useEffect(() => {
+    if (!started || dead) return;
+    const id = setInterval(() => {
+      setSnake((prev) => {
+        const [dx, dy] = dirRef.current;
+        const head = [prev[0][0] + dx, prev[0][1] + dy];
+        // wall collision
+        if (head[0] < 0 || head[0] >= COLS || head[1] < 0 || head[1] >= ROWS) { setDead(true); return prev; }
+        // self collision
+        if (prev.some(([x, y]) => x === head[0] && y === head[1])) { setDead(true); return prev; }
+        const ate = head[0] === food[0] && head[1] === food[1];
+        const next = [head, ...prev];
+        if (ate) { setScore((s) => s + 1); setFood(randFood(next)); }
+        else next.pop();
+        return next;
+      });
+    }, 110);
+    return () => clearInterval(id);
+  }, [started, dead, food, randFood]);
+
+  return (
+    <div style={{ margin: "4px 0" }}>
+      <Title>Snake — mini game</Title>
+      <div style={{ display: "flex", gap: 16, flexWrap: "wrap", alignItems: "flex-start" }}>
+        <div style={{
+          position: "relative", width: COLS * CELL, height: ROWS * CELL,
+          background: "#fff", border: `2px solid ${C.border}`, borderRadius: 4,
+          backgroundImage: `linear-gradient(${C.panel} 1px,transparent 1px),linear-gradient(90deg,${C.panel} 1px,transparent 1px)`,
+          backgroundSize: `${CELL}px ${CELL}px`,
+        }}>
+          {snake.map(([x, y], i) => (
+            <div key={i} style={{
+              position: "absolute", left: x * CELL, top: y * CELL, width: CELL, height: CELL,
+              background: i === 0 ? C.titlebar : C.blueKey, borderRadius: i === 0 ? 4 : 2,
+              boxShadow: i === 0 ? `0 0 6px ${C.titlebar}` : "none",
+            }} />
+          ))}
+          <div style={{
+            position: "absolute", left: food[0] * CELL + 3, top: food[1] * CELL + 3,
+            width: CELL - 6, height: CELL - 6, background: "#ffd400", borderRadius: "50%",
+            boxShadow: "0 0 6px #ffd400",
+          }} />
+          {(!started || dead) && (
+            <div style={{
+              position: "absolute", inset: 0, display: "flex", flexDirection: "column",
+              alignItems: "center", justifyContent: "center", gap: 8,
+              background: "rgba(28,10,16,.78)", color: "#fff", textAlign: "center", padding: 12,
+            }}>
+              <div style={{ fontWeight: 700, fontSize: 16, color: "#ffd0dc" }}>
+                {dead ? `Game Over — score ${score}` : "🐍 Snake"}
+              </div>
+              <div style={{ fontSize: 12.5, opacity: .9 }}>Use arrow keys to move.</div>
+              <button className="keycap accent" style={{ minWidth: 0, padding: "6px 14px" }} onClick={reset}>
+                <span className="klabel">{dead ? "Play again" : "Start"} (Space)</span>
+              </button>
+            </div>
+          )}
+        </div>
+        <div style={{ color: C.ink, fontSize: 13.5, maxWidth: 220 }}>
+          <div style={{ fontWeight: 700, color: C.blueKey, marginBottom: 4 }}>Score: {score}</div>
+          <div style={{ color: C.grey, lineHeight: 1.6 }}>
+            Controls: arrow keys to steer, <b>Space</b> to start / restart.<br /><br />
+            Eat the yellow dots, avoid the walls and your own tail. Type <b>clear</b> to exit.
+          </div>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+// ====================================================================
+//  MAIN APP
+// ====================================================================
 export default function App() {
-  const [phase, setPhase] = useState("boot"); // boot -> shell
+  const [phase, setPhase] = useState("boot");
   const [bootIdx, setBootIdx] = useState(0);
-  const [history, setHistory] = useState([]); // {cmd, node}
+  const [history, setHistory] = useState([]);
   const [input, setInput] = useState("");
-  const [open, setOpen] = useState({}); // collapsible sections
   const scrollRef = useRef(null);
   const inputRef = useRef(null);
 
-  // boot animation
   useEffect(() => {
     if (phase !== "boot") return;
     if (bootIdx < BOOT_LINES.length) {
@@ -257,7 +385,10 @@ export default function App() {
     }
     const t = setTimeout(() => {
       setPhase("shell");
-      setHistory([{ cmd: null, node: <WelcomeBanner /> }, { cmd: null, node: <Section name="summary" /> }]);
+      setHistory([
+        { cmd: null, node: <WelcomeBanner /> },
+        { cmd: null, node: <Section name="summary" typed /> },
+      ]);
     }, 500);
     return () => clearTimeout(t);
   }, [phase, bootIdx]);
@@ -271,14 +402,15 @@ export default function App() {
     let node = null;
     if (cmd === "") node = null;
     else if (cmd === "help" || cmd === "ls") node = <Help />;
-    else if (cmd === "about" || cmd === "summary" || cmd === "whoami") node = <Section name="summary" />;
-    else if (cmd === "experience" || cmd === "exp" || cmd === "work") node = <Section name="experience" />;
-    else if (cmd === "skills") node = <Section name="skills" />;
-    else if (cmd === "projects" || cmd === "git") node = <Section name="projects" />;
-    else if (cmd === "education" || cmd === "edu") node = <Section name="education" />;
-    else if (cmd === "languages" || cmd === "lang" || cmd === "locale") node = <Section name="languages" />;
+    else if (cmd === "about" || cmd === "summary" || cmd === "whoami") node = <Section name="summary" typed />;
+    else if (cmd === "experience" || cmd === "exp" || cmd === "work") node = <Section name="experience" typed />;
+    else if (cmd === "skills") node = <Section name="skills" typed />;
+    else if (cmd === "projects" || cmd === "git") node = <Section name="projects" typed />;
+    else if (cmd === "education" || cmd === "edu") node = <Section name="education" typed />;
+    else if (cmd === "languages" || cmd === "lang" || cmd === "locale") node = <Section name="languages" typed />;
     else if (cmd === "all" || cmd === "cat cv") node = <FullCV />;
     else if (cmd === "contact") node = <Contact />;
+    else if (cmd === "snake" || cmd === "play") node = <Snake />;
     else if (cmd === "pdf" || cmd === "download") { generatePDF(); node = <Ok>Generating PDF… check your downloads.</Ok>; }
     else if (cmd === "linkedin") { window.open(CV.linkedin, "_blank"); node = <Ok>Opening LinkedIn…</Ok>; }
     else if (cmd === "email" || cmd === "mail") { window.location.href = `mailto:${CV.email}`; node = <Ok>Opening mail client…</Ok>; }
@@ -289,12 +421,11 @@ export default function App() {
     setInput("");
   }, []);
 
-  // keyboard shortcuts matching the keycaps
   useEffect(() => {
     const onKey = (e) => {
       const map = {
         F1: "about", F2: "experience", F3: "skills", F4: "projects",
-        F5: "contact", F6: "pdf", F7: "linkedin", Escape: "clear",
+        F5: "contact", F6: "pdf", F7: "linkedin", F8: "snake", Escape: "clear",
       };
       if (map[e.key]) { e.preventDefault(); run(map[e.key]); }
     };
@@ -304,60 +435,48 @@ export default function App() {
 
   return (
     <div style={{
-      height: "100vh", background: C.black, padding: "16px 16px",
+      height: "100vh", width: "100vw", background: C.black, padding: "10px",
       fontFamily: "'DejaVu Sans Mono', ui-monospace, 'Courier New', monospace",
       color: "#ddd", display: "flex", flexDirection: "column",
     }}>
       <style>{`
         @keyframes blink{50%{opacity:0}}
         @keyframes fadein{from{opacity:0;transform:translateY(4px)}to{opacity:1;transform:none}}
+        @keyframes hl{from{background:rgba(138,15,46,.28)}to{background:transparent}}
         .fade{animation:fadein .25s ease both}
-        /* physical keyboard keycap */
+        .typed-done{animation:hl 1.1s ease forwards;border-radius:3px}
         .keycap{
           font-family:inherit;cursor:pointer;
           display:inline-flex;flex-direction:column;align-items:center;justify-content:center;
           gap:2px;min-width:84px;padding:7px 12px 8px;
-          background:linear-gradient(180deg,#3a3f45 0%,#2b2f34 60%,#23262b 100%);
-          color:#cfe0ee;
-          border:1px solid #15171a;
-          border-radius:8px;
-          box-shadow:
-            0 1px 0 #4a5057 inset,
-            0 -2px 3px rgba(0,0,0,.4) inset,
-            0 4px 0 #15171a,
-            0 6px 9px rgba(0,0,0,.55);
-          transition:transform .06s ease, box-shadow .06s ease, filter .12s ease;
-          user-select:none;
+          background:linear-gradient(180deg,#a8163c 0%,#8a0f2e 60%,#6e0a24 100%);
+          color:#fff;border:1px solid #4a0818;border-radius:8px;
+          box-shadow:0 1px 0 #c4254f inset,0 -2px 3px rgba(0,0,0,.35) inset,0 4px 0 #4a0818,0 6px 9px rgba(0,0,0,.45);
+          transition:transform .06s ease,box-shadow .06s ease,filter .12s ease;user-select:none;
         }
-        .keycap:hover{filter:brightness(1.18)}
-        .keycap:active,.keycap.pressed{
-          transform:translateY(4px);
-          box-shadow:
-            0 1px 0 #4a5057 inset,
-            0 -1px 2px rgba(0,0,0,.4) inset,
-            0 0 0 #15171a,
-            0 1px 2px rgba(0,0,0,.5);
-        }
-        .keycap .fkey{font-size:10px;font-weight:700;letter-spacing:.5px;color:#5cc8ff;line-height:1}
-        .keycap .klabel{font-size:12.5px;font-weight:700;line-height:1;color:#e8f1f8}
-        .keycap.accent .klabel{color:#ffd9b0}
-        .keycap.accent .fkey{color:#ffb066}
+        .keycap:hover{filter:brightness(1.12)}
+        .keycap:active,.keycap.pressed{transform:translateY(4px);
+          box-shadow:0 1px 0 #c4254f inset,0 -1px 2px rgba(0,0,0,.35) inset,0 0 0 #4a0818,0 1px 2px rgba(0,0,0,.5);}
+        .keycap .fkey{font-size:10px;font-weight:700;letter-spacing:.5px;color:#ffc9d8;line-height:1}
+        .keycap .klabel{font-size:12.5px;font-weight:700;line-height:1;color:#fff}
+        .keycap.accent{background:linear-gradient(180deg,#fff 0%,#f1eef0 100%);border-color:#4a0818}
+        .keycap.accent .klabel{color:#8a0f2e}
+        .keycap.accent .fkey{color:#b01540}
         a{color:${C.blue};text-decoration:none}
         a:hover{text-decoration:underline}
         .cmdline{background:transparent;border:none;outline:none;color:${C.ink};
-          font-family:inherit;font-size:15px;flex:1;caret-color:${C.ink}}
+          font-family:inherit;font-size:15px;flex:1;caret-color:${C.titlebar}}
       `}</style>
 
-      <div style={{ width: "100%", maxWidth: 1100, margin: "0 auto", flex: 1, display: "flex", flexDirection: "column", minHeight: 0 }}>
-        {/* panel */}
+      <div style={{ width: "100%", flex: 1, display: "flex", flexDirection: "column", minHeight: 0 }}>
         <div style={{
-          background: C.panel, border: "2px solid #efefe6",
+          background: C.panel, border: "2px solid #fff",
           boxShadow: `0 0 0 2px ${C.border}, 0 18px 50px -10px rgba(0,0,0,.8)`,
-          flex: 1, display: "flex", flexDirection: "column", minHeight: 0,
+          flex: 1, display: "flex", flexDirection: "column", minHeight: 0, borderRadius: 4,
         }}>
           {/* titlebar */}
           <div style={{
-            background: `linear-gradient(180deg,${C.titlebar},#a04e16)`, color: "#fff",
+            background: `linear-gradient(180deg,${C.titlebar},#6e0a24)`, color: "#fff",
             fontWeight: 700, padding: "5px 12px", borderBottom: `2px solid ${C.border}`,
             display: "flex", justifyContent: "space-between", alignItems: "center", gap: 8,
           }}>
@@ -365,12 +484,12 @@ export default function App() {
             <span style={{ fontSize: 12, opacity: .85 }}>{phase === "boot" ? "booting…" : "online"}</span>
           </div>
 
-          {/* single clear action bar — keyboard keycaps (only in shell) */}
+          {/* keycap action bar */}
           {phase === "shell" && (
             <div style={{
               display: "flex", flexWrap: "wrap", gap: 8, padding: "12px 14px",
               borderBottom: `2px solid ${C.border}`,
-              background: "linear-gradient(180deg,#1a1c1f,#15171a)",
+              background: "linear-gradient(180deg,#3a0612,#2a0610)",
             }}>
               {NAV_KEYS.map(([fkey, label, cmd, accent]) => (
                 <button key={cmd} className={`keycap${accent ? " accent" : ""}`} onClick={() => run(cmd)}>
@@ -397,7 +516,7 @@ export default function App() {
                       <div style={{ color: C.green, fontWeight: 700 }}>
                         <span style={{ color: C.blue }}>atzin@dev</span>
                         <span style={{ color: C.grey }}>:</span>
-                        <span style={{ color: "#8a5a1e" }}>~/cv</span>
+                        <span style={{ color: "#b5557a" }}>~/cv</span>
                         <span style={{ color: C.grey }}>$ </span>
                         <span style={{ color: C.ink, fontWeight: 400 }}>{h.cmd}</span>
                       </div>
@@ -405,12 +524,11 @@ export default function App() {
                     {h.node}
                   </div>
                 ))}
-                {/* live prompt */}
                 <div style={{ display: "flex", alignItems: "center" }}
                   onClick={() => inputRef.current && inputRef.current.focus()}>
                   <span style={{ color: C.blue, fontWeight: 700 }}>atzin@dev</span>
                   <span style={{ color: C.grey }}>:</span>
-                  <span style={{ color: "#8a5a1e", fontWeight: 700 }}>~/cv</span>
+                  <span style={{ color: "#b5557a", fontWeight: 700 }}>~/cv</span>
                   <span style={{ color: C.grey, fontWeight: 700, marginRight: 6 }}>$</span>
                   <input ref={inputRef} className="cmdline" autoFocus value={input}
                     onChange={(e) => setInput(e.target.value)}
@@ -422,9 +540,8 @@ export default function App() {
           </div>
         </div>
 
-        {/* subtle hint line */}
-        <div style={{ textAlign: "center", padding: "8px 4px 0", fontSize: 12, color: "#777", flex: "0 0 auto" }}>
-          Tip: click a key above, press <b style={{ color: "#9fd3f5" }}>F1–F7</b> on your keyboard, or type a command in the shell.
+        <div style={{ textAlign: "center", padding: "8px 4px 2px", fontSize: 12, color: "#caa", flex: "0 0 auto" }}>
+          Tip: click a key, press <b style={{ color: "#ffc9d8" }}>F1–F8</b>, or type a command. Try <b style={{ color: "#ffc9d8" }}>snake</b>!
         </div>
       </div>
     </div>
@@ -436,7 +553,7 @@ function BootSequence({ idx }) {
   return (
     <div style={{ fontFamily: "inherit" }}>
       {BOOT_LINES.slice(0, idx).map((l, i) => (
-        <div key={i} className="fade" style={{ color: i === BOOT_LINES.length - 1 ? C.green : "#3a3a32" }}>{l}</div>
+        <div key={i} className="fade" style={{ color: i === BOOT_LINES.length - 1 ? C.titlebar : "#7a3a4a", fontWeight: i === BOOT_LINES.length - 1 ? 700 : 400 }}>{l}</div>
       ))}
       {idx < BOOT_LINES.length && <div style={{ color: C.ink }}>_<Cursor /></div>}
     </div>
@@ -444,24 +561,24 @@ function BootSequence({ idx }) {
 }
 
 function WelcomeBanner() {
-  const typed = useTyped("whoami", 60);
+  const [typed, done] = useTyped("whoami", 60);
   return (
     <div>
       <div style={{ color: C.green, fontWeight: 700, marginBottom: 6 }}>
         <span style={{ color: C.blue }}>atzin@dev</span>
         <span style={{ color: C.grey }}>:</span>
-        <span style={{ color: "#8a5a1e" }}>~/cv</span>
+        <span style={{ color: "#b5557a" }}>~/cv</span>
         <span style={{ color: C.grey }}>$ </span>
-        <span style={{ color: C.ink, fontWeight: 400 }}>{typed}<Cursor /></span>
+        <span style={{ color: C.ink, fontWeight: 400 }}>{typed}{!done && <Cursor />}</span>
       </div>
-      <h1 style={{ fontSize: 24, fontWeight: 700, color: C.ink, margin: "2px 0", lineHeight: 1.15 }}>{CV.name}</h1>
+      <h1 style={{ fontSize: 26, fontWeight: 700, color: C.ink, margin: "2px 0", lineHeight: 1.15 }}>{CV.name}</h1>
       <div style={{ color: C.blue, fontWeight: 700, fontSize: 15 }}>{CV.role}</div>
       <div style={{ marginTop: 6, color: C.ink, fontSize: 13.5 }}>
         {CV.location} &nbsp;·&nbsp; <a href={CV.whatsapp}>{CV.phone}</a> &nbsp;·&nbsp;
         <a href={`mailto:${CV.email}`}>{CV.email}</a> &nbsp;·&nbsp;
         <a href={CV.linkedin} target="_blank" rel="noopener noreferrer">LinkedIn</a>
       </div>
-      <div style={{ marginTop: 8, color: C.grey, fontSize: 13 }}>Type <b style={{ color: C.blueKey }}>help</b> to list commands, or use the buttons above.</div>
+      <div style={{ marginTop: 8, color: C.grey, fontSize: 13 }}>Type <b style={{ color: C.blueKey }}>help</b> to list commands, or use the keys above.</div>
     </div>
   );
 }
@@ -474,22 +591,26 @@ const Bullet = ({ children }) => (
     <span style={{ position: "absolute", left: 0, color: C.blue, fontWeight: 700, fontSize: 12 }}>&lt;*&gt;</span>{children}
   </div>
 );
-const Ok = ({ children }) => <div style={{ color: C.green }}>{children}</div>;
-const Err = ({ children }) => <div style={{ color: "#b03030" }}>{children}</div>;
+const Ok = ({ children }) => <div style={{ color: C.green, fontWeight: 600 }}>{children}</div>;
+const Err = ({ children }) => <div style={{ color: "#c0152f" }}>{children}</div>;
 
-function Section({ name }) {
+function Section({ name, typed }) {
+  const T = ({ text, style }) => typed
+    ? <TypeBlock text={text} speed={6} style={style} />
+    : <span style={style}>{text}</span>;
+
   if (name === "summary") return (
-    <div><Title>Professional Summary</Title><div style={{ color: C.ink }}>{CV.summary}</div></div>
+    <div><Title>Professional Summary</Title><div style={{ color: C.ink }}><T text={CV.summary} /></div></div>
   );
   if (name === "experience") return (
     <div><Title>Professional Experience</Title>
       {CV.experience.map((j, i) => (
         <div key={i} style={{ margin: "8px 0" }}>
           <div style={{ display: "flex", justifyContent: "space-between", flexWrap: "wrap", gap: 8 }}>
-            <span><b style={{ color: C.ink }}>{j.title}</b> <span style={{ color: "#3a3a32" }}>— {j.company}</span></span>
+            <span><b style={{ color: C.ink }}>{j.title}</b> <span style={{ color: "#5a4a4e" }}>— {j.company}</span></span>
             {j.date && <span style={{ color: C.grey, fontSize: 13 }}>{j.date}</span>}
           </div>
-          {j.bullets.map((b, k) => <Bullet key={k}>{b}</Bullet>)}
+          {j.bullets.map((b, k) => <Bullet key={k}><T text={b} /></Bullet>)}
         </div>
       ))}
     </div>
@@ -499,7 +620,7 @@ function Section({ name }) {
       {CV.skills.map(([k, v], i) => (
         <div key={i} style={{ display: "flex", gap: 8, flexWrap: "wrap", margin: "4px 0" }}>
           <span style={{ color: C.blueKey, fontWeight: 700, minWidth: 175 }}>{k}</span>
-          <span style={{ flex: 1, color: C.ink }}>{v}</span>
+          <span style={{ flex: 1, color: C.ink }}><T text={v} /></span>
         </div>
       ))}
     </div>
@@ -507,7 +628,7 @@ function Section({ name }) {
   if (name === "projects") return (
     <div><Title>Projects</Title>
       {CV.projects.map(([n, d], i) => (
-        <div key={i} style={{ margin: "5px 0", color: C.ink }}><b style={{ color: C.blueKey }}>{n}</b> — {d}</div>
+        <div key={i} style={{ margin: "5px 0", color: C.ink }}><b style={{ color: C.blueKey }}>{n}</b> — <T text={d} /></div>
       ))}
     </div>
   );
@@ -518,7 +639,7 @@ function Section({ name }) {
           <div style={{ display: "flex", justifyContent: "space-between", flexWrap: "wrap", gap: 8 }}>
             <b style={{ color: C.ink }}>{t}</b><span style={{ color: C.grey, fontSize: 13 }}>{dt}</span>
           </div>
-          <div style={{ color: "#3a3a32", fontSize: 13.5 }}>{s}</div>
+          <div style={{ color: "#5a4a4e", fontSize: 13.5 }}><T text={s} /></div>
         </div>
       ))}
     </div>
@@ -568,6 +689,7 @@ function Help() {
     ["contact", "contact info"],
     ["all", "print the full CV"],
     ["pdf", "download CV as PDF"],
+    ["snake / play", "play a game of Snake 🐍"],
     ["linkedin / email / whatsapp", "open link"],
     ["clear", "clear the screen"],
   ];
