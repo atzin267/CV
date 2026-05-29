@@ -239,6 +239,7 @@ function TypeBlock({ text, speed = 8, onDone, style }) {
 }
 
 // ---------- SNAKE GAME ----------
+// ---------- SNAKE GAME ----------
 function Snake() {
   const COLS = 22, ROWS = 16, CELL = 18;
   const [snake, setSnake] = useState([[8, 8], [7, 8], [6, 8]]);
@@ -250,6 +251,7 @@ function Snake() {
   const dirRef = useRef(dir);
   const pendingRef = useRef(dir);
   dirRef.current = dir;
+  const touchRef = useRef(null);
 
   const randFood = useCallback((sn) => {
     let f;
@@ -264,23 +266,47 @@ function Snake() {
     setFood([14, 8]); setDead(false); setScore(0); setStarted(true);
   }, []);
 
+  // change direction (keyboard, buttons, swipe). prevents reverse.
+  const turn = useCallback((nd) => {
+    const cur = dirRef.current;
+    if (nd[0] === -cur[0] && nd[1] === -cur[1]) return;
+    pendingRef.current = nd;
+  }, []);
+
+  // keyboard control
   useEffect(() => {
     const onKey = (e) => {
       const k = e.key;
-      const cur = dirRef.current;   // direccion del ultimo movimiento real
-      let nd = null;
-      if (k === "ArrowUp" && cur[1] !== 1) nd = [0, -1];
-      else if (k === "ArrowDown" && cur[1] !== -1) nd = [0, 1];
-      else if (k === "ArrowLeft" && cur[0] !== 1) nd = [-1, 0];
-      else if (k === "ArrowRight" && cur[0] !== -1) nd = [1, 0];
-      else if (k === " ") { e.preventDefault(); if (dead || !started) reset(); return; }
-      if (nd) { e.preventDefault(); pendingRef.current = nd; }
+      if (k === "ArrowUp") { e.preventDefault(); turn([0, -1]); }
+      else if (k === "ArrowDown") { e.preventDefault(); turn([0, 1]); }
+      else if (k === "ArrowLeft") { e.preventDefault(); turn([-1, 0]); }
+      else if (k === "ArrowRight") { e.preventDefault(); turn([1, 0]); }
+      else if (k === " ") { e.preventDefault(); if (dead || !started) reset(); }
     };
     window.addEventListener("keydown", onKey);
     return () => window.removeEventListener("keydown", onKey);
-  }, [dead, started, reset]);
+  }, [dead, started, reset, turn]);
 
+  // touch swipe control
+  const onTouchStart = (e) => {
+    const t = e.touches[0];
+    touchRef.current = [t.clientX, t.clientY];
+    if (dead || !started) reset();
+  };
+  const onTouchMove = (e) => {
+    if (!touchRef.current) return;
+    if (e.cancelable) e.preventDefault();
+    const t = e.touches[0];
+    const dx = t.clientX - touchRef.current[0];
+    const dy = t.clientY - touchRef.current[1];
+    if (Math.abs(dx) < 24 && Math.abs(dy) < 24) return;
+    if (Math.abs(dx) > Math.abs(dy)) turn(dx > 0 ? [1, 0] : [-1, 0]);
+    else turn(dy > 0 ? [0, 1] : [0, -1]);
+    touchRef.current = [t.clientX, t.clientY];
+  };
+  const onTouchEnd = () => { touchRef.current = null; };
 
+  // game loop
   useEffect(() => {
     if (!started || dead) return;
     const id = setInterval(() => {
@@ -301,16 +327,32 @@ function Snake() {
     return () => clearInterval(id);
   }, [started, dead, food, randFood]);
 
+  const DpadBtn = ({ label, nd, style }) => (
+    <button
+      onPointerDown={(e) => { e.preventDefault(); turn(nd); }}
+      style={{
+        width: 54, height: 54, fontSize: 22, fontWeight: 700,
+        background: "linear-gradient(180deg,#a8163c,#6e0a24)", color: "#fff",
+        border: "1px solid #4a0818", borderRadius: 8, cursor: "pointer",
+        boxShadow: "0 3px 0 #4a0818", userSelect: "none", touchAction: "none", ...style,
+      }}
+    >{label}</button>
+  );
+
   return (
     <div style={{ margin: "4px 0" }}>
       <Title>Snake - mini game</Title>
       <div style={{ display: "flex", gap: 16, flexWrap: "wrap", alignItems: "flex-start" }}>
-        <div style={{
-          position: "relative", width: COLS * CELL, height: ROWS * CELL,
-          background: "#fff", border: `2px solid ${C.border}`, borderRadius: 4,
-          backgroundImage: `linear-gradient(${C.panel} 1px,transparent 1px),linear-gradient(90deg,${C.panel} 1px,transparent 1px)`,
-          backgroundSize: `${CELL}px ${CELL}px`,
-        }}>
+        <div
+          onTouchStart={onTouchStart}
+          onTouchMove={onTouchMove}
+          onTouchEnd={onTouchEnd}
+          style={{
+            position: "relative", width: COLS * CELL, height: ROWS * CELL, maxWidth: "92vw",
+            background: "#fff", border: `2px solid ${C.border}`, borderRadius: 4,
+            backgroundImage: `linear-gradient(${C.panel} 1px,transparent 1px),linear-gradient(90deg,${C.panel} 1px,transparent 1px)`,
+            backgroundSize: `${CELL}px ${CELL}px`, touchAction: "none",
+          }}>
           {snake.map(([x, y], i) => (
             <div key={i} style={{
               position: "absolute", left: x * CELL, top: y * CELL, width: CELL, height: CELL,
@@ -332,18 +374,26 @@ function Snake() {
               <div style={{ fontWeight: 700, fontSize: 16, color: "#ffd0dc" }}>
                 {dead ? `Game Over - score ${score}` : "Snake"}
               </div>
-              <div style={{ fontSize: 12.5, opacity: .9 }}>Use arrow keys to move.</div>
+              <div style={{ fontSize: 12.5, opacity: .9 }}>Swipe or use the arrows to move.</div>
               <button className="keycap" style={{ minWidth: 0, padding: "6px 14px", background: "linear-gradient(180deg,#fff,#f1eef0)", border: "1px solid #4a0818" }} onClick={reset}>
-                <span className="klabel" style={{ color: "#8a0f2e" }}>{dead ? "Play again" : "Start"} (Space)</span>
+                <span className="klabel" style={{ color: "#8a0f2e" }}>{dead ? "Play again" : "Start"}</span>
               </button>
             </div>
           )}
         </div>
+
         <div style={{ color: C.ink, fontSize: 13.5, maxWidth: 220 }}>
           <div style={{ fontWeight: 700, color: C.blueKey, marginBottom: 4 }}>Score: {score}</div>
           <div style={{ color: C.grey, lineHeight: 1.6 }}>
-            Controls: arrow keys to steer, <b>Space</b> to start / restart.<br /><br />
-            Eat the yellow dots, avoid the walls and your own tail. Type <b>clear</b> to exit.
+            Desktop: arrow keys + <b>Space</b>. Phone: <b>swipe</b> the board or use the pad. Type <b>clear</b> to exit.
+          </div>
+          <div style={{ marginTop: 12, display: "grid", gridTemplateColumns: "54px 54px 54px", gridTemplateRows: "54px 54px", gap: 6, justifyContent: "start" }}>
+            <span />
+            <DpadBtn label="^" nd={[0, -1]} />
+            <span />
+            <DpadBtn label="<" nd={[-1, 0]} />
+            <DpadBtn label="v" nd={[0, 1]} />
+            <DpadBtn label=">" nd={[1, 0]} />
           </div>
         </div>
       </div>
