@@ -1,15 +1,7 @@
 import React, { useState, useEffect, useRef, useCallback } from "react";
 import { jsPDF } from "jspdf";
 
-/* ============================================================
-   Atzin Emiliano Guerrero Leyva — Interactive Terminal CV
-   A React single-file app styled after a Linux boot screen.
-   Features: animated boot sequence, typed prompt, runnable
-   commands, reactive section navigation, keyboard shortcuts,
-   and on-the-fly PDF generation (jsPDF).
-   ============================================================ */
-
-// ---------- CV DATA (single source of truth) ----------
+// ---------- CV DATA ----------
 const CV = {
   name: "Atzin Emiliano Guerrero Leyva",
   role: "Software, Automation & Cloud Developer",
@@ -77,15 +69,15 @@ const CV = {
 
 // ---------- THEME ----------
 const C = {
-  black: "#1c0a10",        // near-black guinda backdrop
-  panel: "#fbfafa",        // bright white panel
-  titlebar: "#8a0f2e",     // intense guinda red
-  ink: "#241f20",          // dark text on white
-  blue: "#8a0f2e",         // links -> guinda red
-  blueKey: "#b01540",      // keys -> brighter guinda
-  green: "#8a0f2e",        // headings -> guinda red
+  black: "#1c0a10",
+  panel: "#fbfafa",
+  titlebar: "#8a0f2e",
+  ink: "#241f20",
+  blue: "#8a0f2e",
+  blueKey: "#b01540",
+  green: "#8a0f2e",
   grey: "#6b6b6b",
-  border: "#5e0a20",       // deep guinda border
+  border: "#5e0a20",
 };
 
 // ---------- PDF GENERATION ----------
@@ -100,10 +92,7 @@ function generatePDF() {
   const grey = [90, 90, 90];
 
   const checkBreak = (h) => {
-    if (y + h > doc.internal.pageSize.getHeight() - M) {
-      doc.addPage();
-      y = M;
-    }
+    if (y + h > doc.internal.pageSize.getHeight() - M) { doc.addPage(); y = M; }
   };
 
   doc.setFont("helvetica", "bold").setFontSize(20).setTextColor(...navy);
@@ -193,21 +182,20 @@ function generatePDF() {
 }
 
 // ---------- NAV KEYS ----------
-// [F-label, button label, command, isAccent]
 const NAV_KEYS = [
-  ["F1", "About", "about", false],
-  ["F2", "Experience", "experience", false],
-  ["F3", "Skills", "skills", false],
-  ["F4", "Projects", "projects", false],
-  ["F5", "Contact", "contact", false],
-  ["F6", "PDF ↓", "pdf", true],
-  ["F7", "LinkedIn", "linkedin", false],
-  ["F8", "Snake 🐍", "snake", true],
-  ["esc", "Clear", "clear", false],
+  ["F1", "About", "about"],
+  ["F2", "Experience", "experience"],
+  ["F3", "Skills", "skills"],
+  ["F4", "Projects", "projects"],
+  ["F5", "Contact", "contact"],
+  ["F6", "PDF", "pdf"],
+  ["F7", "LinkedIn", "linkedin"],
+  ["F8", "Snake", "snake"],
+  ["esc", "Clear", "clear"],
 ];
 
 const BOOT_LINES = [
-  "[  0.000000] Initializing atzin@dev résumé kernel ...",
+  "[  0.000000] Initializing atzin@dev resume kernel ...",
   "[  0.184913] Loading profile: Software, Automation & Cloud Developer",
   "[  0.402551] Mounting /experience ... done",
   "[  0.661048] Mounting /skills ... done",
@@ -215,7 +203,7 @@ const BOOT_LINES = [
   "[  0.991337] Ready.",
 ];
 
-// ---------- typing hook (per-character reveal) ----------
+// ---------- typing hook ----------
 function useTyped(text, speed = 22, start = true) {
   const [out, setOut] = useState("");
   const [done, setDone] = useState(false);
@@ -240,7 +228,6 @@ const Cursor = () => (
   }} />
 );
 
-// A block of text that types itself out, then "highlights" when finished.
 function TypeBlock({ text, speed = 8, onDone, style }) {
   const [out, done] = useTyped(text, speed, true);
   useEffect(() => { if (done && onDone) onDone(); }, [done, onDone]);
@@ -251,9 +238,7 @@ function TypeBlock({ text, speed = 8, onDone, style }) {
   );
 }
 
-// ====================================================================
-//  SNAKE GAME
-// ====================================================================
+// ---------- SNAKE GAME ----------
 function Snake() {
   const COLS = 22, ROWS = 16, CELL = 18;
   const [snake, setSnake] = useState([[8, 8], [7, 8], [6, 8]]);
@@ -263,9 +248,7 @@ function Snake() {
   const [score, setScore] = useState(0);
   const [started, setStarted] = useState(false);
   const dirRef = useRef(dir);
-  const snakeRef = useRef(snake);
   dirRef.current = dir;
-  snakeRef.current = snake;
 
   const randFood = useCallback((sn) => {
     let f;
@@ -280,7 +263,6 @@ function Snake() {
     setFood([14, 8]); setDead(false); setScore(0); setStarted(true);
   }, []);
 
-  // keyboard control
   useEffect(() => {
     const onKey = (e) => {
       const k = e.key;
@@ -295,16 +277,13 @@ function Snake() {
     return () => window.removeEventListener("keydown", onKey);
   }, [dead, started, reset]);
 
-  // game loop
   useEffect(() => {
     if (!started || dead) return;
     const id = setInterval(() => {
       setSnake((prev) => {
         const [dx, dy] = dirRef.current;
         const head = [prev[0][0] + dx, prev[0][1] + dy];
-        // wall collision
         if (head[0] < 0 || head[0] >= COLS || head[1] < 0 || head[1] >= ROWS) { setDead(true); return prev; }
-        // self collision
         if (prev.some(([x, y]) => x === head[0] && y === head[1])) { setDead(true); return prev; }
         const ate = head[0] === food[0] && head[1] === food[1];
         const next = [head, ...prev];
@@ -318,7 +297,7 @@ function Snake() {
 
   return (
     <div style={{ margin: "4px 0" }}>
-      <Title>Snake — mini game</Title>
+      <Title>Snake - mini game</Title>
       <div style={{ display: "flex", gap: 16, flexWrap: "wrap", alignItems: "flex-start" }}>
         <div style={{
           position: "relative", width: COLS * CELL, height: ROWS * CELL,
@@ -345,7 +324,7 @@ function Snake() {
               background: "rgba(28,10,16,.78)", color: "#fff", textAlign: "center", padding: 12,
             }}>
               <div style={{ fontWeight: 700, fontSize: 16, color: "#ffd0dc" }}>
-                {dead ? `Game Over — score ${score}` : "🐍 Snake"}
+                {dead ? `Game Over - score ${score}` : "Snake"}
               </div>
               <div style={{ fontSize: 12.5, opacity: .9 }}>Use arrow keys to move.</div>
               <button className="keycap" style={{ minWidth: 0, padding: "6px 14px", background: "linear-gradient(180deg,#fff,#f1eef0)", border: "1px solid #4a0818" }} onClick={reset}>
@@ -366,9 +345,7 @@ function Snake() {
   );
 }
 
-// ====================================================================
-//  MAIN APP
-// ====================================================================
+// ---------- MAIN APP ----------
 export default function App() {
   const [phase, setPhase] = useState("boot");
   const [bootIdx, setBootIdx] = useState(0);
@@ -411,12 +388,12 @@ export default function App() {
     else if (cmd === "all" || cmd === "cat cv") node = <FullCV />;
     else if (cmd === "contact") node = <Contact />;
     else if (cmd === "snake" || cmd === "play") node = <Snake />;
-    else if (cmd === "pdf" || cmd === "download") { generatePDF(); node = <Ok>Generating PDF… check your downloads.</Ok>; }
-    else if (cmd === "linkedin") { window.open(CV.linkedin, "_blank"); node = <Ok>Opening LinkedIn…</Ok>; }
-    else if (cmd === "email" || cmd === "mail") { window.location.href = `mailto:${CV.email}`; node = <Ok>Opening mail client…</Ok>; }
-    else if (cmd === "whatsapp" || cmd === "wa") { window.open(CV.whatsapp, "_blank"); node = <Ok>Opening WhatsApp…</Ok>; }
+    else if (cmd === "pdf" || cmd === "download") { generatePDF(); node = <Ok>Generating PDF... check your downloads.</Ok>; }
+    else if (cmd === "linkedin") { window.open(CV.linkedin, "_blank"); node = <Ok>Opening LinkedIn...</Ok>; }
+    else if (cmd === "email" || cmd === "mail") { window.location.href = `mailto:${CV.email}`; node = <Ok>Opening mail client...</Ok>; }
+    else if (cmd === "whatsapp" || cmd === "wa") { window.open(CV.whatsapp, "_blank"); node = <Ok>Opening WhatsApp...</Ok>; }
     else if (cmd === "clear" || cmd === "cls") { setHistory([]); setInput(""); return; }
-    else node = <Err>command not found: {raw.trim()} — type <b>help</b></Err>;
+    else node = <Err>command not found: {raw.trim()} - type <b>help</b></Err>;
     setHistory((h) => [...h, { cmd: raw.trim(), node }]);
     setInput("");
   }, []);
@@ -455,15 +432,12 @@ export default function App() {
           transition:transform .06s ease,box-shadow .06s ease,filter .12s ease;user-select:none;
         }
         .keycap:hover{filter:brightness(1.12)}
-        .keycap:focus{outline:none}
+        .keycap:focus,.keycap:focus-visible{outline:none !important;box-shadow:0 1px 0 #c4254f inset,0 -2px 3px rgba(0,0,0,.35) inset,0 4px 0 #4a0818,0 6px 9px rgba(0,0,0,.45) !important}
         .keycap:focus:not(:active){transform:none}
-        .keycap:active,.keycap.pressed{transform:translateY(4px);
-          box-shadow:0 1px 0 #c4254f inset,0 -1px 2px rgba(0,0,0,.35) inset,0 0 0 #4a0818,0 1px 2px rgba(0,0,0,.5);}
+        .keycap:active{transform:translateY(4px);
+          box-shadow:0 1px 0 #c4254f inset,0 -1px 2px rgba(0,0,0,.35) inset,0 0 0 #4a0818,0 1px 2px rgba(0,0,0,.5) !important;}
         .keycap .fkey{font-size:10px;font-weight:700;letter-spacing:.5px;color:#ffc9d8;line-height:1}
         .keycap .klabel{font-size:12.5px;font-weight:700;line-height:1;color:#fff}
-        .keycap.accent{background:linear-gradient(180deg,#a8163c 0%,#8a0f2e 60%,#6e0a24 100%);border:1px solid #ffd9e2;box-shadow:0 1px 0 #c4254f inset,0 -2px 3px rgba(0,0,0,.35) inset,0 4px 0 #4a0818,0 6px 9px rgba(0,0,0,.45)}
-        .keycap.accent .klabel{color:#fff}
-        .keycap.accent .fkey{color:#ffd9e2}
         a{color:${C.blue};text-decoration:none}
         a:hover{text-decoration:underline}
         .cmdline{background:transparent;border:none;outline:none;color:${C.ink};
@@ -476,25 +450,23 @@ export default function App() {
           boxShadow: `0 0 0 2px ${C.border}, 0 18px 50px -10px rgba(0,0,0,.8)`,
           flex: 1, display: "flex", flexDirection: "column", minHeight: 0, borderRadius: 4,
         }}>
-          {/* titlebar */}
           <div style={{
             background: `linear-gradient(180deg,${C.titlebar},#6e0a24)`, color: "#fff",
             fontWeight: 700, padding: "5px 12px", borderBottom: `2px solid ${C.border}`,
             display: "flex", justifyContent: "space-between", alignItems: "center", gap: 8,
           }}>
-            <span>atzin@dev: ~/cv — résumé shell</span>
-            <span style={{ fontSize: 12, opacity: .85 }}>{phase === "boot" ? "booting…" : "online"}</span>
+            <span>atzin@dev: ~/cv - resume shell</span>
+            <span style={{ fontSize: 12, opacity: .85 }}>{phase === "boot" ? "booting..." : "online"}</span>
           </div>
 
-          {/* keycap action bar */}
           {phase === "shell" && (
             <div style={{
               display: "flex", flexWrap: "wrap", gap: 8, padding: "12px 14px",
               borderBottom: `2px solid ${C.border}`,
               background: "linear-gradient(180deg,#3a0612,#2a0610)",
             }}>
-              {NAV_KEYS.map(([fkey, label, cmd, accent]) => (
-                <button key={cmd} className={`keycap${accent ? " accent" : ""}`} onClick={(e) => { e.currentTarget.blur(); run(cmd); }}>
+              {NAV_KEYS.map(([fkey, label, cmd]) => (
+                <button key={cmd} className="keycap" onClick={(e) => { e.currentTarget.blur(); run(cmd); }}>
                   <span className="fkey">{fkey}</span>
                   <span className="klabel">{label}</span>
                 </button>
@@ -502,7 +474,6 @@ export default function App() {
             </div>
           )}
 
-          {/* screen */}
           <div ref={scrollRef} style={{
             padding: "16px 18px", color: C.ink,
             flex: phase === "boot" ? "0 0 auto" : 1, minHeight: 0,
@@ -535,7 +506,7 @@ export default function App() {
                   <input ref={inputRef} className="cmdline" autoFocus value={input}
                     onChange={(e) => setInput(e.target.value)}
                     onKeyDown={(e) => { if (e.key === "Enter") run(input); }}
-                    placeholder="type 'help'…" spellCheck={false} />
+                    placeholder="type 'help'..." spellCheck={false} />
                 </div>
               </>
             )}
@@ -543,7 +514,7 @@ export default function App() {
         </div>
 
         <div style={{ textAlign: "center", padding: "8px 4px 2px", fontSize: 12, color: "#caa", flex: "0 0 auto" }}>
-          Tip: click a key, press <b style={{ color: "#ffc9d8" }}>F1–F8</b>, or type a command. Try <b style={{ color: "#ffc9d8" }}>snake</b>!
+          Tip: click a key, press <b style={{ color: "#ffc9d8" }}>F1-F8</b>, or type a command. Try <b style={{ color: "#ffc9d8" }}>snake</b>!
         </div>
       </div>
     </div>
@@ -672,10 +643,10 @@ function FullCV() {
 function Contact() {
   return (
     <div><Title>Contact</Title>
-      <div style={{ color: C.ink }}>📍 {CV.location}</div>
-      <div>📱 <a href={CV.whatsapp} target="_blank" rel="noopener noreferrer">{CV.phone}</a> (WhatsApp)</div>
-      <div>✉ <a href={`mailto:${CV.email}`}>{CV.email}</a></div>
-      <div>🔗 <a href={CV.linkedin} target="_blank" rel="noopener noreferrer">linkedin.com/in/atzin-guerrero-leyva</a></div>
+      <div style={{ color: C.ink }}>{CV.location}</div>
+      <div><a href={CV.whatsapp} target="_blank" rel="noopener noreferrer">{CV.phone}</a> (WhatsApp)</div>
+      <div><a href={`mailto:${CV.email}`}>{CV.email}</a></div>
+      <div><a href={CV.linkedin} target="_blank" rel="noopener noreferrer">linkedin.com/in/atzin-guerrero-leyva</a></div>
     </div>
   );
 }
@@ -691,7 +662,7 @@ function Help() {
     ["contact", "contact info"],
     ["all", "print the full CV"],
     ["pdf", "download CV as PDF"],
-    ["snake / play", "play a game of Snake 🐍"],
+    ["snake / play", "play a game of Snake"],
     ["linkedin / email / whatsapp", "open link"],
     ["clear", "clear the screen"],
   ];
