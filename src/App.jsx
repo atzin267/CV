@@ -248,6 +248,7 @@ function Snake() {
   const [score, setScore] = useState(0);
   const [started, setStarted] = useState(false);
   const dirRef = useRef(dir);
+  const pendingRef = useRef(dir);
   dirRef.current = dir;
 
   const randFood = useCallback((sn) => {
@@ -259,28 +260,33 @@ function Snake() {
 
   const reset = useCallback(() => {
     setSnake([[8, 8], [7, 8], [6, 8]]);
-    setDir([1, 0]); dirRef.current = [1, 0];
+    setDir([1, 0]); dirRef.current = [1, 0]; pendingRef.current = [1, 0];
     setFood([14, 8]); setDead(false); setScore(0); setStarted(true);
   }, []);
 
   useEffect(() => {
     const onKey = (e) => {
       const k = e.key;
-      const cur = dirRef.current;
-      if (k === "ArrowUp" && cur[1] !== 1) { e.preventDefault(); setDir([0, -1]); }
-      else if (k === "ArrowDown" && cur[1] !== -1) { e.preventDefault(); setDir([0, 1]); }
-      else if (k === "ArrowLeft" && cur[0] !== 1) { e.preventDefault(); setDir([-1, 0]); }
-      else if (k === "ArrowRight" && cur[0] !== -1) { e.preventDefault(); setDir([1, 0]); }
-      else if (k === " ") { e.preventDefault(); if (dead || !started) reset(); }
+      const cur = dirRef.current;   // direccion del ultimo movimiento real
+      let nd = null;
+      if (k === "ArrowUp" && cur[1] !== 1) nd = [0, -1];
+      else if (k === "ArrowDown" && cur[1] !== -1) nd = [0, 1];
+      else if (k === "ArrowLeft" && cur[0] !== 1) nd = [-1, 0];
+      else if (k === "ArrowRight" && cur[0] !== -1) nd = [1, 0];
+      else if (k === " ") { e.preventDefault(); if (dead || !started) reset(); return; }
+      if (nd) { e.preventDefault(); pendingRef.current = nd; }
     };
     window.addEventListener("keydown", onKey);
     return () => window.removeEventListener("keydown", onKey);
   }, [dead, started, reset]);
 
+
   useEffect(() => {
     if (!started || dead) return;
     const id = setInterval(() => {
       setSnake((prev) => {
+        dirRef.current = pendingRef.current;
+        setDir(pendingRef.current);
         const [dx, dy] = dirRef.current;
         const head = [prev[0][0] + dx, prev[0][1] + dy];
         if (head[0] < 0 || head[0] >= COLS || head[1] < 0 || head[1] >= ROWS) { setDead(true); return prev; }
