@@ -455,6 +455,8 @@ export default function App() {
           transition:transform .06s ease,box-shadow .06s ease,filter .12s ease;user-select:none;
         }
         .keycap:hover{filter:brightness(1.12)}
+        .keycap:focus{outline:none}
+        .keycap:focus:not(:active){transform:none}
         .keycap:active,.keycap.pressed{transform:translateY(4px);
           box-shadow:0 1px 0 #c4254f inset,0 -1px 2px rgba(0,0,0,.35) inset,0 0 0 #4a0818,0 1px 2px rgba(0,0,0,.5);}
         .keycap .fkey{font-size:10px;font-weight:700;letter-spacing:.5px;color:#ffc9d8;line-height:1}
@@ -492,9 +494,7 @@ export default function App() {
               background: "linear-gradient(180deg,#3a0612,#2a0610)",
             }}>
               {NAV_KEYS.map(([fkey, label, cmd, accent]) => (
-                <button key={cmd} className={`keycap${accent ? " accent" : ""}`} onClick={() => run(cmd)}>
-                  <span className="fkey">{fkey}</span>
-                  <span className="klabel">{label}</span>
+                <button key={cmd} className={`keycap${accent ? " accent" : ""}`} onClick={(e) => { e.currentTarget.blur(); run(cmd); }}>                  <span className="klabel">{label}</span>
                 </button>
               ))}
             </div>
