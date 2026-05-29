@@ -200,9 +200,9 @@ const NAV_KEYS = [
   ["F3", "Skills", "skills", false],
   ["F4", "Projects", "projects", false],
   ["F5", "Contact", "contact", false],
-  ["F6", "PDF ↓", "pdf", false],
+  ["F6", "PDF", "pdf", false],
   ["F7", "LinkedIn", "linkedin", false],
-  ["F8", "Snake 🐍", "snake", false],
+  ["F8", "Snake", "snake", false],
   ["esc", "Clear", "clear", false],
 ];
 
